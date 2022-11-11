@@ -9,6 +9,10 @@ import (
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
 )
+type AuthClaims struct {
+	jwt.StandartClaims
+	User *models.User `json:"user"`
+}
 
 type AuthUseCase struct {
 	userRepo       auth.UserRepository
@@ -26,7 +30,7 @@ func NewAuthUseCase(
 		userRepo:       userRepo,
 		hashSalt:       hashSalt,
 		singingKey:     singingKey,
-		expireDuration: tokenTTL,
+		expireDuration: time.Second * tokenTTL,
 	}
 }
 
@@ -40,3 +44,7 @@ func (a *AuthUseCase) SignUp(ctx context.Context, login, password string) error 
 	}
 	return a.userRepo.CreateUser(ctx, user)
 }
+// TODO
+ //SignIn
+
+ //ParseToken

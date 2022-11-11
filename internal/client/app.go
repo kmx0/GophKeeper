@@ -1,29 +1,47 @@
-package server
+package client
 
 import (
+	"context"
+	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
-	"github.com/kmx0/GophKeeper/internal/auth"
-	authhttp "github.com/kmx0/GophKeeper/auth/delivery/http"
-	authmongo "github.com/kmx0/GophKeeper/auth/repository/mongo"
-	authusecase "github.com/kmx0/GophKeeper/auth/usecase"
-	bmhttp "github.com/kmx0/GophKeeper/bookmark/delivery/http"
-	bmmongo "github.com/kmx0/GophKeeper/bookmark/repository/mongo"
+	"github.com/zhashkevych/go-clean-architecture/auth"
+	"github.com/zhashkevych/go-clean-architecture/bookmark"
+
+	authhttp "github.com/zhashkevych/go-clean-architecture/auth/delivery/http"
+	authmongo "github.com/zhashkevych/go-clean-architecture/auth/repository/mongo"
+	authusecase "github.com/zhashkevych/go-clean-architecture/auth/usecase"
+	bmhttp "github.com/zhashkevych/go-clean-architecture/bookmark/delivery/http"
+	bmmongo "github.com/zhashkevych/go-clean-architecture/bookmark/repository/mongo"
+	bmusecase "github.com/zhashkevych/go-clean-architecture/bookmark/usecase"
 )
 
-type App struct{
+type App struct {
 	httpServer *http.Server
-	authUC auth.UseCase
-}
-func NewApp()*App{
-	db := initDB()
-	userRepo := authmongo.NewUserRepository(db, viper.GetString("mongo.user_collection"))
-	retrun &App{
 
-		authUC:authusecase.NewAuthUsecase(
+	bookmarkUC bookmark.UseCase
+	authUC     auth.UseCase
+}
+
+func NewApp() *App {
+	db := initDB()
+
+	userRepo := authmongo.NewUserRepository(db, viper.GetString("mongo.user_collection"))
+	bookmarkRepo := bmmongo.NewBookmarkRepository(db, viper.GetString("mongo.bookmark_collection"))
+
+	return &App{
+		bookmarkUC: bmusecase.NewBookmarkUseCase(bookmarkRepo),
+		authUC: authusecase.NewAuthUseCase(
 			userRepo,
 			viper.GetString("auth.hash_salt"),
-			[]byte(viper.GetString("auth.signin_key")),
+			[]byte(viper.GetString("auth.signing_key")),
 			viper.GetDuration("auth.token_ttl"),
 		),
 	}
@@ -72,8 +90,6 @@ func (a *App) Run(port string) error {
 
 	return a.httpServer.Shutdown(ctx)
 }
-
-
 
 func initDB() *mongo.Database {
 	client, err := mongo.NewClient(options.Client().ApplyURI(viper.GetString("mongo.uri")))

@@ -5,6 +5,7 @@ import (
 
 	"github.com/kmx0/GophKeeper/internal/models"
 )
+const CtxUserKey = "user"
 
 type UseCase interface{
 	SignUp(ctx context.Context, username, password string)error
