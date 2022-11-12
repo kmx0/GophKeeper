@@ -35,3 +35,29 @@ func (h *Handler) SignUp(c *gin.Context) {
 	c.Status(http.StatusOK)
 
 }
+
+type signInResponse struct {
+	Token string `json:"token"`
+}
+
+func (h *Handler) SignIn(c *gin.Context) {
+	inp := new(signInput)
+
+	if err := c.BindJSON(inp); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.useCase.SignIn(c.Request.Context(), inp.Login, inp.Password)
+	if err != nil {
+		if err == auth.ErrUserNotFound {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, signInResponse{Token: token})
+}

@@ -1,29 +1,49 @@
 package server
 
 import (
+	"context"
+	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/kmx0/GophKeeper/internal/auth"
-	authhttp "github.com/kmx0/GophKeeper/auth/delivery/http"
-	authmongo "github.com/kmx0/GophKeeper/auth/repository/mongo"
-	authusecase "github.com/kmx0/GophKeeper/auth/usecase"
-	bmhttp "github.com/kmx0/GophKeeper/bookmark/delivery/http"
-	bmmongo "github.com/kmx0/GophKeeper/bookmark/repository/mongo"
+	"github.com/kmx0/GophKeeper/internal/secret"
+	"github.com/spf13/viper"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
+	authhttp "github.com/kmx0/GophKeeper/internal/auth/delivery/http"
+	secrethttp "github.com/kmx0/GophKeeper/internal/secret/delivery/http"
+	scusecase "github.com/kmx0/GophKeeper/internal/secret/usecase"
+	authmongo "github.com/zhashkevych/go-clean-architecture/auth/repository/mongo"
+	authusecase "github.com/zhashkevych/go-clean-architecture/auth/usecase"
+	bmmongo "github.com/zhashkevych/go-clean-architecture/bookmark/repository/mongo"
 )
 
-type App struct{
+type App struct {
 	httpServer *http.Server
-	authUC auth.UseCase
-}
-func NewApp()*App{
-	db := initDB()
-	userRepo := authmongo.NewUserRepository(db, viper.GetString("mongo.user_collection"))
-	retrun &App{
 
-		authUC:authusecase.NewAuthUsecase(
+	secretUC secret.UseCase
+	authUC   auth.UseCase
+}
+
+func NewApp() *App {
+	db := initDB()
+
+	userRepo := authmongo.NewUserRepository(db, viper.GetString("mongo.user_collection"))
+	secretkRepo := bmmongo.NewBookmarkRepository(db, viper.GetString("mongo.secret_collection"))
+
+	return &App{
+		secretUC: scusecase.NewSecretUseCase(secretkRepo),
+		authUC: authusecase.NewAuthUseCase(
 			userRepo,
 			viper.GetString("auth.hash_salt"),
-			[]byte(viper.GetString("auth.signin_key")),
+			[]byte(viper.GetString("auth.signing_key")),
 			viper.GetDuration("auth.token_ttl"),
 		),
 	}
@@ -45,7 +65,7 @@ func (a *App) Run(port string) error {
 	authMiddleware := authhttp.NewAuthMiddleware(a.authUC)
 	api := router.Group("/api", authMiddleware)
 
-	bmhttp.RegisterHTTPEndpoints(api, a.bookmarkUC)
+	secrethttp.RegisterHTTPEndpoints(api, a.secretUC)
 
 	// HTTP Server
 	a.httpServer = &http.Server{
@@ -73,8 +93,6 @@ func (a *App) Run(port string) error {
 	return a.httpServer.Shutdown(ctx)
 }
 
-
-
 func initDB() *mongo.Database {
 	client, err := mongo.NewClient(options.Client().ApplyURI(viper.GetString("mongo.uri")))
 	if err != nil {
@@ -95,4 +113,18 @@ func initDB() *mongo.Database {
 	}
 
 	return client.Database(viper.GetString("mongo.name"))
+}
+func initDBPG() {
+	databaseUrl := "postgres://postgres:mypassword@localhost:5432/postgres"
+
+	// this returns connection pool
+	dbPool, err := pgxpool.Connect(context.Background(), databaseUrl)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
+	}
+
+	// to close DB pool
+	defer dbPool.Close()
 }

@@ -4,5 +4,5 @@ type Secret struct {
 	//int
 	ID     string
 	UserID string
-	Value  interface{}
+	Value  string
 }

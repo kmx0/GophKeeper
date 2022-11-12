@@ -1,6 +1,11 @@
 package http
 
-func RegisterHTTPEndpoints(router *gin.Engine, uc auth.UseCase){
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/kmx0/GophKeeper/internal/auth"
+)
+
+func RegisterHTTPEndpoints(router *gin.Engine, uc auth.UseCase) {
 	h := NewHandler(uc)
 
 	authEndpoints := router.Group("/auth")
