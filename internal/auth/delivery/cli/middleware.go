@@ -19,34 +19,31 @@ func NewAuthMiddleware(usecase auth.UseCase) gin.HandlerFunc {
 }
 
 func (m *AuthMiddleware) Handle(c *gin.Context) {
-	//checking file in home directory
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-
 	headerParts := strings.Split(authHeader, " ")
 	if len(headerParts) != 2 {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-
 	if headerParts[0] != "Bearer" {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
-
 	user, err := m.usecase.ParseToken(c.Request.Context(), headerParts[1])
-	if err != nil {
-		status := http.StatusInternalServerError
-		if err == auth.ErrInvalidAccessToken {
-			status = http.StatusUnauthorized
-		}
+	switch err {
 
-		c.AbortWithStatus(status)
+	case nil:
+		c.Set(auth.CtxUserKey, user)
+	case auth.ErrInvalidAccessToken:
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	default:
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	c.Set(auth.CtxUserKey, user)
 }

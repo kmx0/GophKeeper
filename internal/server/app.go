@@ -14,15 +14,15 @@ import (
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/secret"
 	"github.com/spf13/viper"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	authhttp "github.com/kmx0/GophKeeper/internal/auth/delivery/http"
-	secrethttp "github.com/kmx0/GophKeeper/internal/secret/delivery/http"
+	authlocalstorage "github.com/kmx0/GophKeeper/internal/auth/repository/localstorage"
+	authpostgres "github.com/kmx0/GophKeeper/internal/auth/repository/postgres"
+	authusecase "github.com/kmx0/GophKeeper/internal/auth/usecase"
+	schttp "github.com/kmx0/GophKeeper/internal/secret/delivery/http"
+	sclocalstorage "github.com/kmx0/GophKeeper/internal/secret/repository/localstorage"
+	scpostgres "github.com/kmx0/GophKeeper/internal/secret/repository/postgres"
 	scusecase "github.com/kmx0/GophKeeper/internal/secret/usecase"
-	authmongo "github.com/zhashkevych/go-clean-architecture/auth/repository/mongo"
-	authusecase "github.com/zhashkevych/go-clean-architecture/auth/usecase"
-	bmmongo "github.com/zhashkevych/go-clean-architecture/bookmark/repository/mongo"
 )
 
 type App struct {
@@ -32,21 +32,38 @@ type App struct {
 	authUC   auth.UseCase
 }
 
-func NewApp() *App {
-	db := initDB()
+func NewApp(ctx context.Context, dsn string) *App {
+	if dsn != "" {
+		pool, err := initDBPG(ctx, dsn)
+		if err != nil {
+			return nil
+		}
+		userRepo := authpostgres.NewUserRepository(pool)
+		secretkRepo := scpostgres.NewSecretRepository(pool)
+		return &App{
+			secretUC: scusecase.NewSecretUseCase(secretkRepo),
+			authUC: authusecase.NewAuthUseCase(
+				userRepo,
+				viper.GetString("auth.hash_salt"),
+				[]byte(viper.GetString("auth.signing_key")),
+				viper.GetDuration("auth.token_ttl"),
+			),
+		}
+	} else {
+		userRepo := authlocalstorage.NewUserLocalStorage()
+		secretkRepo := sclocalstorage.NewSecretLocalStorage()
 
-	userRepo := authmongo.NewUserRepository(db, viper.GetString("mongo.user_collection"))
-	secretkRepo := bmmongo.NewBookmarkRepository(db, viper.GetString("mongo.secret_collection"))
-
-	return &App{
-		secretUC: scusecase.NewSecretUseCase(secretkRepo),
-		authUC: authusecase.NewAuthUseCase(
-			userRepo,
-			viper.GetString("auth.hash_salt"),
-			[]byte(viper.GetString("auth.signing_key")),
-			viper.GetDuration("auth.token_ttl"),
-		),
+		return &App{
+			secretUC: scusecase.NewSecretUseCase(secretkRepo),
+			authUC: authusecase.NewAuthUseCase(
+				userRepo,
+				viper.GetString("auth.hash_salt"),
+				[]byte(viper.GetString("auth.signing_key")),
+				viper.GetDuration("auth.token_ttl"),
+			),
+		}
 	}
+
 }
 
 func (a *App) Run(port string) error {
@@ -65,7 +82,7 @@ func (a *App) Run(port string) error {
 	authMiddleware := authhttp.NewAuthMiddleware(a.authUC)
 	api := router.Group("/api", authMiddleware)
 
-	secrethttp.RegisterHTTPEndpoints(api, a.secretUC)
+	schttp.RegisterHTTPEndpoints(api, a.secretUC)
 
 	// HTTP Server
 	a.httpServer = &http.Server{
@@ -93,38 +110,18 @@ func (a *App) Run(port string) error {
 	return a.httpServer.Shutdown(ctx)
 }
 
-func initDB() *mongo.Database {
-	client, err := mongo.NewClient(options.Client().ApplyURI(viper.GetString("mongo.uri")))
+func initDBPG(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	conf, err := pgxpool.ParseConfig(dsn) // Using environment variables instead of a connection string.
 	if err != nil {
-		log.Fatalf("Error occured while establishing connection to mongoDB")
+		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	conf.LazyConnect = true
 
-	err = client.Connect(ctx)
+	pool, err := pgxpool.ConnectConfig(ctx, conf)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("pgx connection error: %w", err)
 	}
 
-	err = client.Ping(context.Background(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return client.Database(viper.GetString("mongo.name"))
-}
-func initDBPG() {
-	databaseUrl := "postgres://postgres:mypassword@localhost:5432/postgres"
-
-	// this returns connection pool
-	dbPool, err := pgxpool.Connect(context.Background(), databaseUrl)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-
-	// to close DB pool
-	defer dbPool.Close()
+	return pool, nil
 }

@@ -76,7 +76,7 @@ type getResponse struct {
 	Secrets []*Secret `json:"secrets"`
 }
 
-func (h *Handler) GetAll(c *gin.Context) {
+func (h *Handler) List(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	scs, err := h.useCase.GetSecrets(c, user)
 	if err != nil {

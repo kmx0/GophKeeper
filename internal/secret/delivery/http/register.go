@@ -12,7 +12,7 @@ func RegisterHTTPEndpoints(router *gin.RouterGroup, uc secret.UseCase) {
 	{
 		authEndpoints.POST("/create",  h.Create)
 		authEndpoints.POST("/get",     h.Get)
-		authEndpoints.POST("/get-all", h.GetAll)
+		authEndpoints.POST("/list", h.List)
 		authEndpoints.POST("/delete",  h.Delete)
 	}
 }

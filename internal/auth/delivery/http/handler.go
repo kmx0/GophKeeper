@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kmx0/GophKeeper/internal/auth"
+	"github.com/sirupsen/logrus"
 )
 
 type Handler struct {
@@ -18,17 +19,22 @@ func NewHandler(useCase auth.UseCase) *Handler {
 }
 
 type signInput struct {
-	Login    string
-	Password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 func (h *Handler) SignUp(c *gin.Context) {
+	logrus.Info("!!!!!!!!!!!!!!!!!!")
 	inp := new(signInput)
 	if err := c.BindJSON(inp); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	if err := h.useCase.SignUp(c.Request.Context(), inp.Login, inp.Password); err != nil {
+		if err == auth.ErrLoginBusy {
+			c.AbortWithStatus(http.StatusConflict)
+			return
+		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
