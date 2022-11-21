@@ -100,7 +100,7 @@ func (r *SecretRepository) GetSecrets(ctx context.Context, user *models.User) ([
 	}
 	return result, nil
 }
-func (r *SecretRepository) DeleteSecret(ctx context.Context, user *models.User, id string) error {
+func (r *SecretRepository) DeleteSecret(ctx context.Context, user *models.User, key string) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 
@@ -115,11 +115,11 @@ func (r *SecretRepository) DeleteSecret(ctx context.Context, user *models.User, 
 		}
 	}()
 
-	deleteStmt, err := tx.Prepare(ctx, "delete", `DELETE FROM secrets WHERE user_id = $1 AND id = $2;`)
+	deleteStmt, err := tx.Prepare(ctx, "delete", `DELETE FROM secrets WHERE user_id = $1 AND key = $2;`)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, deleteStmt.Name, user.ID, id)
+	_, err = tx.Exec(ctx, deleteStmt.Name, user.ID, key)
 	if err != nil {
 		return err
 	}

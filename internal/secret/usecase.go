@@ -7,8 +7,8 @@ import (
 )
 
 type UseCase interface {
-	CreateSecret(ctx context.Context, user *models.User, value string) error
+	CreateSecret(ctx context.Context, user *models.User, key, value, secretType string) error
 	GetSecrets(ctx context.Context, user *models.User) ([]*models.Secret, error)
-	GetSecret(ctx context.Context, user *models.User, id string) (*models.Secret, error)
-	DeleteSecret(ctx context.Context, user *models.User, id string) error
+	GetSecret(ctx context.Context, user *models.User, key string) (*models.Secret, error)
+	DeleteSecret(ctx context.Context, user *models.User, key string) error
 }

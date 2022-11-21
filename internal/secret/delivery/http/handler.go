@@ -7,13 +7,16 @@ import (
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
 	"github.com/kmx0/GophKeeper/internal/secret"
+	"github.com/sirupsen/logrus"
 )
 
 type Secret struct {
 	//int
 	ID     string
 	UserID string
+	Key    string
 	Value  string
+	Type   string
 }
 
 type Handler struct {
@@ -28,9 +31,12 @@ func NewHandler(useCase secret.UseCase) *Handler {
 
 type createInput struct {
 	Value string `json:"value"`
+	Key   string `json:"key"`
+	Type  string `json:"type"`
 }
 
 func (h *Handler) Create(c *gin.Context) {
+	logrus.Error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	input := new(createInput)
 	if err := c.BindJSON(input); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -39,7 +45,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 
-	if err := h.useCase.CreateSecret(c, user, input.Value); err != nil {
+	if err := h.useCase.CreateSecret(c, user, input.Key, input.Value, input.Type); err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -51,7 +57,7 @@ type getResponseSingle struct {
 }
 
 type getInput struct {
-	ID string `json:"id"`
+	Key string `json:"key"`
 }
 
 func (h *Handler) Get(c *gin.Context) {
@@ -62,11 +68,17 @@ func (h *Handler) Get(c *gin.Context) {
 	}
 
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
-	sc, err := h.useCase.GetSecret(c, user, input.ID)
+	sc, err := h.useCase.GetSecret(c, user, input.Key)
 	if err != nil {
+		logrus.Error(err)
+		if err == secret.ErrSecretNotFound {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	logrus.Info(sc.Key, sc.Type)
 	c.JSON(http.StatusOK, &getResponseSingle{
 		Secret: toSecret(sc),
 	})
@@ -80,6 +92,11 @@ func (h *Handler) List(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	scs, err := h.useCase.GetSecrets(c, user)
 	if err != nil {
+		if err == secret.ErrUserHaveNotSecret {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		logrus.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -90,7 +107,7 @@ func (h *Handler) List(c *gin.Context) {
 }
 
 type deleteInput struct {
-	ID string `json:"id"`
+	Key string `json:"key"`
 }
 
 func (h *Handler) Delete(c *gin.Context) {
@@ -100,8 +117,9 @@ func (h *Handler) Delete(c *gin.Context) {
 		return
 	}
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
-	err := h.useCase.DeleteSecret(c, user, input.ID)
+	err := h.useCase.DeleteSecret(c, user, input.Key)
 	if err != nil {
+		logrus.Info(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -122,6 +140,8 @@ func toSecret(s *models.Secret) *Secret {
 	return &Secret{
 		ID:     s.ID,
 		UserID: s.UserID,
+		Key:    s.Key,
 		Value:  s.Value,
+		Type:   s.Type,
 	}
 }

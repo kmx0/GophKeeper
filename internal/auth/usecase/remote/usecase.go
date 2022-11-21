@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
@@ -22,13 +23,15 @@ type AuthUseCase struct {
 	userRepo   auth.UserRepository
 	singingKey []byte
 	hashSalt   string
+	tokenFile  string
 }
 
-func NewAuthUseCase(userRepo auth.UserRepository, hashSalt string, singingKey []byte) *AuthUseCase {
+func NewAuthUseCase(userRepo auth.UserRepository, hashSalt string, singingKey []byte, tokenFile string) *AuthUseCase {
 	return &AuthUseCase{
 		userRepo:   userRepo,
 		singingKey: singingKey,
 		hashSalt:   hashSalt,
+		tokenFile:  tokenFile,
 	}
 }
 
@@ -57,7 +60,11 @@ func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (strin
 	if err != nil {
 		return "", auth.ErrUserNotFound
 	}
-	return user.Token, nil
+	err = ioutil.WriteFile(a.tokenFile, []byte(user.Token), 0777)
+	if err != nil {
+		return "", err
+	}
+	return user.Token, err
 }
 
 func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*models.User, error) {
@@ -72,6 +79,7 @@ func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*mode
 	}
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
+		claims.User.Token = token.Raw
 		return claims.User, nil
 	}
 	return nil, auth.ErrInvalidAccessToken

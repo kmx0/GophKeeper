@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kmx0/GophKeeper/internal/auth"
-	"github.com/sirupsen/logrus"
 )
 
 type Handler struct {
@@ -24,7 +23,6 @@ type signInput struct {
 }
 
 func (h *Handler) SignUp(c *gin.Context) {
-	logrus.Info("!!!!!!!!!!!!!!!!!!")
 	inp := new(signInput)
 	if err := c.BindJSON(inp); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)

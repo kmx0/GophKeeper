@@ -1,49 +1,58 @@
 package cli
 
 import (
-	"net/http"
+	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/kmx0/GophKeeper/internal/auth"
+	"github.com/kmx0/GophKeeper/internal/models"
 )
 
 type AuthMiddleware struct {
-	usecase auth.UseCase
+	usecase   auth.UseCase
+	tokenFile string
 }
 
-func NewAuthMiddleware(usecase auth.UseCase) gin.HandlerFunc {
+func NewAuthMiddleware(usecase auth.UseCase, tokenFile string) *AuthMiddleware {
 	return (&AuthMiddleware{
-		usecase: usecase,
-	}).Handle
+		usecase:   usecase,
+		tokenFile: tokenFile,
+	})
 }
 
-func (m *AuthMiddleware) Handle(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
+func (m *AuthMiddleware) Handle(ctx context.Context) (*models.User, error) {
+
+	tokenFile, err := os.Open(m.tokenFile)
+	if err != nil {
+		// fmt.Println(err)
+		if strings.Contains(err.Error(), "no such file or directory") {
+			return nil, auth.ErrUserNotLoggedIn
+		}
+		return nil, err
 	}
-	headerParts := strings.Split(authHeader, " ")
-	if len(headerParts) != 2 {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer tokenFile.Close()
+
+	byteValue, err := ioutil.ReadAll(tokenFile)
+	if err != nil {
+		return nil, err
 	}
-	if headerParts[0] != "Bearer" {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-	user, err := m.usecase.ParseToken(c.Request.Context(), headerParts[1])
+	user, err := m.usecase.ParseToken(ctx, string(byteValue))
 	switch err {
 
 	case nil:
-		c.Set(auth.CtxUserKey, user)
+		// user.Token =
+		return user, nil
 	case auth.ErrInvalidAccessToken:
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
+		return nil, auth.ErrInvalidAccessToken
 	default:
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
+		if strings.Contains(err.Error(), "token is expired"){
+			return nil, fmt.Errorf("please login again: %s", err.Error())
+		}
+		return nil, err
 	}
 
 }

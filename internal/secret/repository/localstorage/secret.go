@@ -2,7 +2,6 @@ package localstorage
 
 import (
 	"context"
-	"strconv"
 	"sync"
 
 	"github.com/kmx0/GophKeeper/internal/models"
@@ -10,9 +9,8 @@ import (
 )
 
 type SecretLocalStorage struct {
-	secrets  map[string]*models.Secret
-	secretID int
-	mutex    *sync.Mutex
+	secrets map[string]*models.Secret
+	mutex   *sync.Mutex
 }
 
 var _ secret.Repository = (*SecretLocalStorage)(nil)
@@ -27,8 +25,7 @@ func NewSecretLocalStorage() *SecretLocalStorage {
 func (s *SecretLocalStorage) CreateSecret(ctx context.Context, user *models.User, sc *models.Secret) error {
 	s.mutex.Lock()
 	sc.UserID = user.ID
-	s.secrets[strconv.Itoa(s.secretID)] = sc
-	s.secretID += 1
+	s.secrets[sc.Key] = sc
 	s.mutex.Unlock()
 	return nil
 }
@@ -44,26 +41,27 @@ func (s *SecretLocalStorage) GetSecrets(ctx context.Context, user *models.User) 
 	}
 	if len(secrets) == 0 {
 
-		return nil, secret.ErrSecretNotFound
+		return nil, secret.ErrUserHaveNotSecret
 	}
 	return secrets, nil
 
 }
 
-func (s *SecretLocalStorage) GetSecret(ctx context.Context, user *models.User, id string) (*models.Secret, error) {
+func (s *SecretLocalStorage) GetSecret(ctx context.Context, user *models.User, key string) (*models.Secret, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	// for _, secret := range s.secrets {
-	if secret, ok := s.secrets[id]; ok && secret.UserID == user.ID {
+	if secret, ok := s.secrets[key]; ok && secret.UserID == user.ID {
 		return secret, nil
 	}
 	return nil, secret.ErrSecretNotFound
 }
-func (s *SecretLocalStorage) DeleteSecret(ctx context.Context, user *models.User, id string) error {
+func (s *SecretLocalStorage) DeleteSecret(ctx context.Context, user *models.User, key string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if secret, ok := s.secrets[id]; ok && secret.UserID == user.ID {
-		delete(s.secrets, id)
+	if secret, ok := s.secrets[key]; ok && secret.UserID == user.ID {
+		delete(s.secrets, key)
+		return nil
 	}
 	return secret.ErrSecretNotFound
 }

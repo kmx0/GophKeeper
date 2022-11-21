@@ -8,9 +8,8 @@ import (
 var login string
 var password string
 
-// creditCmd represents the credit command
 
-func RegisterCmdEndpoints(rootCmd *cobra.Command, uc auth.UseCase) {
+func RegisterAuthCmdEndpoints(rootCmd *cobra.Command, uc auth.UseCase) {
 	c := NewController(uc)
 	signInCmd := &cobra.Command{
 		Use:   "sign-in",

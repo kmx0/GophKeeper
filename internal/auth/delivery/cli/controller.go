@@ -98,7 +98,7 @@ func (c *Controller) SignUp(ctx context.Context, login, password string) {
 
 }
 
-func (c *Controller) SignIn(ctx context.Context, ogin, password string) {
+func (c *Controller) SignIn(ctx context.Context, login, password string) {
 	fmt.Println(login)
 	fmt.Println(password)
 
@@ -124,7 +124,9 @@ func (c *Controller) SignIn(ctx context.Context, ogin, password string) {
 
 	fmt.Println("successfully logged in")
 	fmt.Println(token)
+
+
+
 	// c.JSON(http.StatusOK, signInResponse{Token: token})
-	//writing token to specify file
 
 }

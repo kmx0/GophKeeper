@@ -5,5 +5,6 @@ type Secret struct {
 	ID     string
 	UserID string
 	Key    string
+	Type   string
 	Value  string
 }
