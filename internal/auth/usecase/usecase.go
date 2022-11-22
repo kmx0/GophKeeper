@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
+	"github.com/sirupsen/logrus"
 
 	"github.com/dgrijalva/jwt-go/v4"
 )
@@ -16,9 +18,16 @@ var _ auth.UseCase = (*AuthUseCase)(nil)
 
 type AuthClaims struct {
 	jwt.StandardClaims
-	User *models.User `json:"user"`
+	User *User `json:"user"`
 }
 
+type User struct {
+	//int
+	ID       string `json:"id,omitempty"`
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
+}
 type AuthUseCase struct {
 	userRepo       auth.UserRepository
 	hashSalt       string
@@ -50,9 +59,6 @@ func (a *AuthUseCase) SignUp(ctx context.Context, login, password string) error 
 	return a.userRepo.CreateUser(ctx, user)
 }
 
-// TODO
-// SignIn
-
 func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (string, error) {
 	pwd := sha1.New()
 
@@ -62,10 +68,11 @@ func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (strin
 
 	user, err := a.userRepo.GetUser(ctx, login, password)
 	if err != nil {
+		logrus.Error(err)
 		return "", auth.ErrUserNotFound
 	}
 	claims := AuthClaims{
-		User: user,
+		User: toUser(user),
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: jwt.At(time.Now().Add(a.expireDuration)),
 		},
@@ -86,7 +93,26 @@ func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*mode
 	}
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
-		return claims.User, nil
+		return toModelUser(claims.User), nil
 	}
 	return nil, auth.ErrInvalidAccessToken
+}
+
+func toModelUser(user *User) *models.User {
+	id, _ := strconv.Atoi(user.ID)
+	return &models.User{
+		ID:       id,
+		Login:    user.Login,
+		Password: user.Password,
+		Token:    user.Token,
+	}
+}
+
+func toUser(user *models.User) *User {
+	return &User{
+		ID:       strconv.Itoa(user.ID),
+		Login:    user.Login,
+		Password: user.Password,
+		Token:    user.Token,
+	}
 }

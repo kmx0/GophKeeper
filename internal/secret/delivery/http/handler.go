@@ -12,8 +12,8 @@ import (
 
 type Secret struct {
 	//int
-	ID     string
-	UserID string
+	ID     int
+	UserID int
 	Key    string
 	Value  string
 	Type   string
@@ -46,6 +46,7 @@ func (h *Handler) Create(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 
 	if err := h.useCase.CreateSecret(c, user, input.Key, input.Value, input.Type); err != nil {
+		logrus.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

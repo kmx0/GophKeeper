@@ -32,8 +32,8 @@ func TestList(t *testing.T) {
 	scs := make([]*models.Secret, 5)
 	for i := 0; i < 5; i++ {
 		scs[i] = &models.Secret{
-			ID:     fmt.Sprintf("id%d", i),
-			UserID: "userid1",
+			ID:     i,
+			UserID: i * i,
 			Key:    fmt.Sprintf("key%d", i),
 			Value:  fmt.Sprintf("value%d", i),
 		}
@@ -68,8 +68,8 @@ func TestGet(t *testing.T) {
 	RegisterHTTPEndpoints(group, uc)
 
 	sc := &models.Secret{
-		ID:     "id",
-		UserID: "userid",
+		ID:     1,
+		UserID: 11,
 		Key:    "key",
 		Value:  "value",
 	}

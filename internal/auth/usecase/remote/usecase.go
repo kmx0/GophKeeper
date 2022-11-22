@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
@@ -16,7 +17,14 @@ var _ auth.UseCase = (*AuthUseCase)(nil)
 
 type AuthClaims struct {
 	jwt.StandardClaims
-	User *models.User `json:"user"`
+	User *User `json:"user"`
+}
+
+type User struct {
+	ID       string `json:"id,omitempty"`
+	Login    string `json:"login,omitempty"`
+	Password string `json:"password,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
 type AuthUseCase struct {
@@ -80,7 +88,18 @@ func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*mode
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
 		claims.User.Token = token.Raw
-		return claims.User, nil
+		return toModelUser(claims.User), nil
 	}
 	return nil, auth.ErrInvalidAccessToken
 }
+
+func toModelUser(user *User) *models.User {
+	id, _ := strconv.Atoi(user.ID)
+	return &models.User{
+		ID:       id,
+		Login:    user.Login,
+		Password: user.Password,
+		Token:    user.Token,
+	}
+}
+

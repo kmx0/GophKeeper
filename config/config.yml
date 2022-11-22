@@ -1,7 +1,11 @@
+address: localhost
 port: 8000
+pg_migration_dir: ../../internal/migrate/migrations
 
 auth:
   hash_salt: "hash_salt"
   signing_key: "signing_key"
   token_ttl: 86000
   token_file: /tmp/token_file
+  server_ssl_cert_path: ../../crypto/server.crt
+  server_ssl_key_path: ../../crypto/server.key

@@ -12,8 +12,8 @@ import (
 
 type Secret struct {
 	//int
-	ID        string
-	UserID    string
+	ID        int
+	UserID    int
 	Key       string
 	Value     string
 	CreatedAt string
@@ -49,28 +49,32 @@ func (r *SecretRepository) CreateSecret(ctx context.Context, user *models.User, 
 		}
 	}()
 
-	insrtStmt, err := tx.Prepare(ctx, "insert", `INSERT INTO secrets (user_id, key, value, created_at) VALUES ($1, $2, $3, $4);`)
+	insrtStmt, err := tx.Prepare(ctx, "secret.insert", `INSERT INTO secrets (users_id, key, value, type, created_at) VALUES ($1, $2, $3, $4,$5);`)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, insrtStmt.Name, user.ID, secret.Key, secret.Value, time.Now())
+	_, err = tx.Exec(ctx, insrtStmt.Name, user.ID, secret.Key, secret.Value, secret.Type, time.Now())
 	if err != nil {
 		return err
 	}
+	err = tx.Commit(ctx)
+
 	return err
 
 }
 
 func (r *SecretRepository) GetSecret(ctx context.Context, user *models.User, key string) (*models.Secret, error) {
-	var id string
+	var id int
 	var value string
-	err := r.db.QueryRow(ctx, `SELECT id, value FROM secrets WHERE user_id = $1 AND key = $2;`, user.ID, key).Scan(&id, &value)
+	var secretType string
+	err := r.db.QueryRow(ctx, `SELECT id, type, value FROM secrets WHERE users_id = $1 AND key = $2;`, user.ID, key).Scan(&id, &secretType, &value)
 	if err != nil {
 		return nil, err
 	}
 	return &models.Secret{
 		ID:     id,
 		UserID: user.ID,
+		Type:   secretType,
 		Key:    key,
 		Value:  value,
 	}, nil
@@ -78,7 +82,7 @@ func (r *SecretRepository) GetSecret(ctx context.Context, user *models.User, key
 
 func (r *SecretRepository) GetSecrets(ctx context.Context, user *models.User) ([]*models.Secret, error) {
 	result := make([]*models.Secret, 0)
-	rows, err := r.db.Query(ctx, `SELECT id, key, value FROM secrets WHERE user_id = $1;`, user.ID)
+	rows, err := r.db.Query(ctx, `SELECT id, type, key, value FROM secrets WHERE users_id = $1;`, user.ID)
 	if err != nil {
 		err = fmt.Errorf("queryRow failed: %v", err)
 		return nil, err
@@ -86,14 +90,15 @@ func (r *SecretRepository) GetSecrets(ctx context.Context, user *models.User) ([
 	defer rows.Close()
 
 	for rows.Next() {
-		var id string
+		var id int
+		var secretType string
 		var key string
 		var value string
-		err := rows.Scan(&id, &key, &value)
+		err := rows.Scan(&id, &secretType, &key, &value)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, &models.Secret{ID: id, UserID: user.ID, Key: key, Value: value})
+		result = append(result, &models.Secret{ID: id, UserID: user.ID, Type: secretType, Key: key, Value: value})
 	}
 	if rows.Err() != nil {
 		return nil, err
@@ -115,7 +120,7 @@ func (r *SecretRepository) DeleteSecret(ctx context.Context, user *models.User, 
 		}
 	}()
 
-	deleteStmt, err := tx.Prepare(ctx, "delete", `DELETE FROM secrets WHERE user_id = $1 AND key = $2;`)
+	deleteStmt, err := tx.Prepare(ctx, "secret.delete", `DELETE FROM secrets WHERE users_id = $1 AND key = $2;`)
 	if err != nil {
 		return err
 	}
@@ -123,5 +128,6 @@ func (r *SecretRepository) DeleteSecret(ctx context.Context, user *models.User, 
 	if err != nil {
 		return err
 	}
+	tx.Commit(ctx)
 	return err
 }

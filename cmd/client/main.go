@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/kmx0/GophKeeper/config"
 	authcli "github.com/kmx0/GophKeeper/internal/auth/delivery/cli"
@@ -25,8 +28,14 @@ func main() {
 		Short:   "Keep your data securly 💻",
 		Version: "0.1",
 	}
-	userRepo := authremotestorage.NewUserRepository(&http.Client{}, "http://localhost:8000")
-	secretRepo := secretremotestorage.NewSecretRepository(&http.Client{}, "http://localhost:8000")
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+	}
+	userRepo := authremotestorage.NewUserRepository(&http.Client{Transport: tr}, fmt.Sprintf("https://%s:%s", viper.GetString("address"), viper.GetString("port")))
+	secretRepo := secretremotestorage.NewSecretRepository(&http.Client{Transport: tr}, fmt.Sprintf("https://%s:%s", viper.GetString("address"), viper.GetString("port")))
 
 	authcli.RegisterAuthCmdEndpoints(rootCmd, authremoteusecase.NewAuthUseCase(
 		userRepo,

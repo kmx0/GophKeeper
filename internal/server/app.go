@@ -19,6 +19,7 @@ import (
 	authlocalstorage "github.com/kmx0/GophKeeper/internal/auth/repository/localstorage"
 	authpostgres "github.com/kmx0/GophKeeper/internal/auth/repository/postgres"
 	authusecase "github.com/kmx0/GophKeeper/internal/auth/usecase"
+	"github.com/kmx0/GophKeeper/internal/migrate"
 	schttp "github.com/kmx0/GophKeeper/internal/secret/delivery/http"
 	sclocalstorage "github.com/kmx0/GophKeeper/internal/secret/repository/localstorage"
 	scpostgres "github.com/kmx0/GophKeeper/internal/secret/repository/postgres"
@@ -38,10 +39,12 @@ func NewApp(ctx context.Context, dsn string) *App {
 		if err != nil {
 			return nil
 		}
+		migrate.Migrate(viper.GetString("pg_migration_dir"), dsn)
+		
 		userRepo := authpostgres.NewUserRepository(pool)
-		secretkRepo := scpostgres.NewSecretRepository(pool)
+		secretRepo := scpostgres.NewSecretRepository(pool)
 		return &App{
-			secretUC: scusecase.NewSecretUseCase(secretkRepo),
+			secretUC: scusecase.NewSecretUseCase(secretRepo),
 			authUC: authusecase.NewAuthUseCase(
 				userRepo,
 				viper.GetString("auth.hash_salt"),
@@ -51,10 +54,9 @@ func NewApp(ctx context.Context, dsn string) *App {
 		}
 	} else {
 		userRepo := authlocalstorage.NewUserLocalStorage()
-		secretkRepo := sclocalstorage.NewSecretLocalStorage()
-
+		secretRepo := sclocalstorage.NewSecretLocalStorage()
 		return &App{
-			secretUC: scusecase.NewSecretUseCase(secretkRepo),
+			secretUC: scusecase.NewSecretUseCase(secretRepo),
 			authUC: authusecase.NewAuthUseCase(
 				userRepo,
 				viper.GetString("auth.hash_salt"),
@@ -94,7 +96,7 @@ func (a *App) Run(port string) error {
 	}
 
 	go func() {
-		if err := a.httpServer.ListenAndServe(); err != nil {
+		if err := a.httpServer.ListenAndServeTLS(viper.GetString("auth.server_ssl_cert_path"), viper.GetString("auth.server_ssl_key_path")); err != nil {
 			log.Fatalf("Failed to listen and serve: %+v", err)
 		}
 	}()

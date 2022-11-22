@@ -22,8 +22,8 @@ var _ secret.Repository = (*SecretRepository)(nil)
 
 type Secret struct {
 	//int
-	ID     string
-	UserID string
+	ID     int
+	UserID int
 	Key    string
 	Value  string
 	Type   string
