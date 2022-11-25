@@ -71,7 +71,7 @@ func (h *Handler) Get(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	sc, err := h.useCase.GetSecret(c, user, input.Key)
 	if err != nil {
-		logrus.Error(err)
+		// logrus.Error(err)
 		if err == secret.ErrSecretNotFound {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
@@ -79,7 +79,7 @@ func (h *Handler) Get(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	logrus.Info(sc.Key, sc.Type)
+	// logrus.Info(sc.Key, sc.Type)
 	c.JSON(http.StatusOK, &getResponseSingle{
 		Secret: toSecret(sc),
 	})

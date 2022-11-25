@@ -3,16 +3,19 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/kmx0/GophKeeper/internal/auth"
 )
 
 type Controller struct {
+	writer  io.Writer
 	useCase auth.UseCase
 }
 
-func NewController(useCase auth.UseCase) *Controller {
+func NewController(writer io.Writer, useCase auth.UseCase) *Controller {
 	return &Controller{
+		writer:  writer,
 		useCase: useCase,
 	}
 }
@@ -82,7 +85,8 @@ func (c *Controller) SignUp(ctx context.Context, login, password string) {
 	fmt.Println(password)
 
 	if len(login) == 0 {
-		fmt.Println("login is empty!")
+		fmt.Fprintf(c.writer, "login is empty!")
+		// fmt.Println("login is empty!")
 		return
 	}
 	if len(password) == 0 {
@@ -92,6 +96,7 @@ func (c *Controller) SignUp(ctx context.Context, login, password string) {
 
 	if err := c.useCase.SignUp(ctx, login, password); err != nil {
 		fmt.Printf("internal server error: %s", err.Error())
+
 		return
 	}
 	fmt.Println("Successfully registered")
@@ -124,8 +129,6 @@ func (c *Controller) SignIn(ctx context.Context, login, password string) {
 
 	fmt.Println("successfully logged in")
 	fmt.Println(token)
-
-
 
 	// c.JSON(http.StatusOK, signInResponse{Token: token})
 

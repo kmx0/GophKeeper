@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/kmx0/GophKeeper/config"
@@ -42,7 +43,7 @@ func main() {
 		viper.GetString("auth.hash_salt"),
 		[]byte(viper.GetString("auth.signing_key")),
 		viper.GetString("auth.token_file"),
-	))
+	), os.Stdout)
 
 	authMidleWare := authcli.NewAuthMiddleware(authremoteusecase.NewAuthUseCase(userRepo,
 		viper.GetString("auth.hash_salt"),

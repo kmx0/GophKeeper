@@ -19,8 +19,8 @@ func NewHandler(useCase auth.UseCase) *Handler {
 }
 
 type signInput struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+	Login    string `json:"login" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 func (h *Handler) SignUp(c *gin.Context) {
@@ -30,6 +30,8 @@ func (h *Handler) SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	logrus.Info(inp)
 	if err := h.useCase.SignUp(c.Request.Context(), inp.Login, inp.Password); err != nil {
 		// logrus.Error(err)
 		if err == auth.ErrLoginBusy {

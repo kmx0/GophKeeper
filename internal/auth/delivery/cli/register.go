@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"io"
+
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/spf13/cobra"
 )
@@ -8,9 +10,8 @@ import (
 var login string
 var password string
 
-
-func RegisterAuthCmdEndpoints(rootCmd *cobra.Command, uc auth.UseCase) {
-	c := NewController(uc)
+func RegisterAuthCmdEndpoints(rootCmd *cobra.Command, uc auth.UseCase, writer io.Writer) {
+	c := NewController(writer, uc)
 	signInCmd := &cobra.Command{
 		Use:   "sign-in",
 		Short: "Sign In to gophkeeper",
