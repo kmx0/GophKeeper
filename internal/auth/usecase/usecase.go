@@ -9,7 +9,6 @@ import (
 
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
-	"github.com/sirupsen/logrus"
 
 	"github.com/dgrijalva/jwt-go/v4"
 )
@@ -68,8 +67,7 @@ func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (strin
 
 	user, err := a.userRepo.GetUser(ctx, login, password)
 	if err != nil {
-		logrus.Error(err)
-		return "", auth.ErrUserNotFound
+		return "", fmt.Errorf("error on SignIn: %w", auth.ErrUserNotFound)
 	}
 	claims := AuthClaims{
 		User: toUser(user),
@@ -84,18 +82,18 @@ func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (strin
 func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*models.User, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("error on ParseToken: %w", fmt.Errorf("errunexpected signing method: %v", token.Header["alg"]))
 		}
 		return a.singingKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error on ParseToken: %w", err)
 	}
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
 		return toModelUser(claims.User), nil
 	}
-	return nil, auth.ErrInvalidAccessToken
+	return nil, fmt.Errorf("error on ParseToken: %w", auth.ErrInvalidAccessToken)
 }
 
 func toModelUser(user *User) *models.User {

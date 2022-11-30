@@ -2,26 +2,28 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/kmx0/GophKeeper/config"
 	"github.com/kmx0/GophKeeper/internal/server"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 func main() {
 	if err := config.Init(); err != nil {
-		log.Fatalf("%s", err.Error())
+		log.Fatalf("error on running server: %v", err.Error())
 	}
 
-	app := server.NewApp(context.Background(), "postgres://postgres:postgres@localhost:5432/gophkeeper")
-	logrus.Info(app == nil)
-	if err := app.Run(viper.GetString("port")); err != nil {
+	fulladdr := viper.GetString("gokeeper_server_addr")
+	temp := strings.Split(fulladdr, "//")
+	if len(temp) < 2 {
+		log.Fatalf("error on running server: %v", fmt.Errorf("incorrect addr in config file, need proto://addr:port"))
+	}
+	addr := temp[1]
+	app := server.NewApp(context.Background(), viper.GetString("dsn"))
+	if err := app.Run(addr); err != nil {
 		log.Fatalf("%s", err.Error())
 	}
 }
-
-//pg migrate
-//tls
-//pg

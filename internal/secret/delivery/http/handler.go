@@ -1,13 +1,13 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kmx0/GophKeeper/internal/auth"
 	"github.com/kmx0/GophKeeper/internal/models"
 	"github.com/kmx0/GophKeeper/internal/secret"
-	"github.com/sirupsen/logrus"
 )
 
 type Secret struct {
@@ -36,7 +36,6 @@ type createInput struct {
 }
 
 func (h *Handler) Create(c *gin.Context) {
-	logrus.Error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	input := new(createInput)
 	if err := c.BindJSON(input); err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -46,7 +45,6 @@ func (h *Handler) Create(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 
 	if err := h.useCase.CreateSecret(c, user, input.Key, input.Value, input.Type); err != nil {
-		logrus.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -71,15 +69,13 @@ func (h *Handler) Get(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	sc, err := h.useCase.GetSecret(c, user, input.Key)
 	if err != nil {
-		// logrus.Error(err)
-		if err == secret.ErrSecretNotFound {
+		if errors.Is(errors.Unwrap(err), secret.ErrSecretNotFound) {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	// logrus.Info(sc.Key, sc.Type)
 	c.JSON(http.StatusOK, &getResponseSingle{
 		Secret: toSecret(sc),
 	})
@@ -93,11 +89,10 @@ func (h *Handler) List(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	scs, err := h.useCase.GetSecrets(c, user)
 	if err != nil {
-		if err == secret.ErrUserHaveNotSecret {
+		if errors.Is(errors.Unwrap(err), secret.ErrUserHaveNotSecret) {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		logrus.Error(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -120,7 +115,10 @@ func (h *Handler) Delete(c *gin.Context) {
 	user := c.MustGet(auth.CtxUserKey).(*models.User)
 	err := h.useCase.DeleteSecret(c, user, input.Key)
 	if err != nil {
-		logrus.Info(err)
+		if errors.Is(errors.Unwrap(err), secret.ErrSecretNotFound) {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

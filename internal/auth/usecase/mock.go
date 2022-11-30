@@ -53,30 +53,30 @@ func (mr *MockUseCaseMockRecorder) ParseToken(ctx, accessToken interface{}) *gom
 }
 
 // SignIn mocks base method.
-func (m *MockUseCase) SignIn(ctx context.Context, username, password string) (string, error) {
+func (m *MockUseCase) SignIn(ctx context.Context, login, password string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SignIn", ctx, username, password)
+	ret := m.ctrl.Call(m, "SignIn", ctx, login, password)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SignIn indicates an expected call of SignIn.
-func (mr *MockUseCaseMockRecorder) SignIn(ctx, username, password interface{}) *gomock.Call {
+func (mr *MockUseCaseMockRecorder) SignIn(ctx, login, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignIn", reflect.TypeOf((*MockUseCase)(nil).SignIn), ctx, username, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignIn", reflect.TypeOf((*MockUseCase)(nil).SignIn), ctx, login, password)
 }
 
 // SignUp mocks base method.
-func (m *MockUseCase) SignUp(ctx context.Context, username, password string) error {
+func (m *MockUseCase) SignUp(ctx context.Context, login, password string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SignUp", ctx, username, password)
+	ret := m.ctrl.Call(m, "SignUp", ctx, login, password)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SignUp indicates an expected call of SignUp.
-func (mr *MockUseCaseMockRecorder) SignUp(ctx, username, password interface{}) *gomock.Call {
+func (mr *MockUseCaseMockRecorder) SignUp(ctx, login, password interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignUp", reflect.TypeOf((*MockUseCase)(nil).SignUp), ctx, username, password)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SignUp", reflect.TypeOf((*MockUseCase)(nil).SignUp), ctx, login, password)
 }

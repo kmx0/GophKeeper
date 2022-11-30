@@ -2,6 +2,7 @@ package localstorage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/kmx0/GophKeeper/internal/auth"
@@ -26,7 +27,7 @@ func (s *UserLocalStorage) CreateUser(ctx context.Context, user *models.User) er
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	if _, ok := s.users[user.Login]; ok {
-		return auth.ErrLoginBusy
+		return fmt.Errorf("error on CreateUser: %w", auth.ErrLoginBusy)
 	}
 	s.users[user.Login] = user
 	return nil
@@ -35,11 +36,9 @@ func (s *UserLocalStorage) CreateUser(ctx context.Context, user *models.User) er
 func (s *UserLocalStorage) GetUser(ctx context.Context, login, password string) (*models.User, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-
-	for _, user := range s.users {
-		if user.Login == login && user.Password == password {
-			return user, nil
-		}
+	user := s.users[login]
+	if user == nil {
+		return nil, fmt.Errorf("error on GetUser: %w", auth.ErrUserNotFound)
 	}
-	return nil, auth.ErrUserNotFound
+	return user, nil
 }

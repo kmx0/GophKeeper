@@ -2,6 +2,7 @@ package localstorage
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/kmx0/GophKeeper/internal/models"
@@ -40,8 +41,8 @@ func (s *SecretLocalStorage) GetSecrets(ctx context.Context, user *models.User) 
 		}
 	}
 	if len(secrets) == 0 {
+		return nil, fmt.Errorf("error on GetSecrets: %w", secret.ErrUserHaveNotSecret)
 
-		return nil, secret.ErrUserHaveNotSecret
 	}
 	return secrets, nil
 
@@ -54,7 +55,7 @@ func (s *SecretLocalStorage) GetSecret(ctx context.Context, user *models.User, k
 	if secret, ok := s.secrets[key]; ok && secret.UserID == user.ID {
 		return secret, nil
 	}
-	return nil, secret.ErrSecretNotFound
+	return nil, fmt.Errorf("error on GetSecret: %w", secret.ErrSecretNotFound)
 }
 func (s *SecretLocalStorage) DeleteSecret(ctx context.Context, user *models.User, key string) error {
 	s.mutex.Lock()

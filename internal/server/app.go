@@ -40,7 +40,7 @@ func NewApp(ctx context.Context, dsn string) *App {
 			return nil
 		}
 		migrate.Migrate(viper.GetString("pg_migration_dir"), dsn)
-		
+
 		userRepo := authpostgres.NewUserRepository(pool)
 		secretRepo := scpostgres.NewSecretRepository(pool)
 		return &App{
@@ -68,7 +68,7 @@ func NewApp(ctx context.Context, dsn string) *App {
 
 }
 
-func (a *App) Run(port string) error {
+func (a *App) Run(addr string) error {
 	// Init gin handler
 	router := gin.Default()
 	router.Use(
@@ -88,7 +88,7 @@ func (a *App) Run(port string) error {
 
 	// HTTP Server
 	a.httpServer = &http.Server{
-		Addr:           ":" + port,
+		Addr:           addr,
 		Handler:        router,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

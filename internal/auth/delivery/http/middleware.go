@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -36,11 +37,11 @@ func (m *AuthMiddleware) Handle(c *gin.Context) {
 		return
 	}
 	user, err := m.usecase.ParseToken(c.Request.Context(), headerParts[1])
-	switch err {
+	switch {
 
-	case nil:
+	case err == nil:
 		c.Set(auth.CtxUserKey, user)
-	case auth.ErrInvalidAccessToken:
+	case errors.Is(errors.Unwrap(err), auth.ErrInvalidAccessToken):
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	default:

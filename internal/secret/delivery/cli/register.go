@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"io"
+
 	"github.com/kmx0/GophKeeper/internal/auth/delivery/cli"
 	"github.com/kmx0/GophKeeper/internal/secret"
 	"github.com/kmx0/GophKeeper/internal/secret/types"
@@ -10,18 +12,16 @@ import (
 var secretKey string
 var secretValue string
 var secretIsFile bool
+var saveFile string
 
 // authEndpoints.POST("/create",  h.Create)
 // authEndpoints.POST("/get",     h.Get)
 // authEndpoints.POST("/list", h.List)
 // authEndpoints.POST("/delete",  h.Delete)
 
-func Init(rootCmd *cobra.Command) {
-
-}
-
-func RegisterSecretCmdEndpoints(rootCmd *cobra.Command, uc secret.UseCase, authMiddleware *cli.AuthMiddleware) {
-	c := NewController(uc, *authMiddleware)
+func RegisterSecretCmdEndpoints(rootCmd *cobra.Command, uc secret.UseCase, authStatus *cli.AuthStatus, writer io.Writer) {
+	c := NewController(uc, authStatus, writer)
+	saveFile = "/tmp/savedSecret"
 	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create new secret",
@@ -31,9 +31,9 @@ func RegisterSecretCmdEndpoints(rootCmd *cobra.Command, uc secret.UseCase, authM
 		Run: func(cmd *cobra.Command, args []string) {
 			if secretIsFile {
 				c.Create(cmd.Context(), secretKey, secretValue, types.File)
-				return
+			} else {
+				c.Create(cmd.Context(), secretKey, secretValue, types.String)
 			}
-			c.Create(cmd.Context(), secretKey, secretValue, types.String)
 
 		},
 	}
@@ -46,7 +46,7 @@ func RegisterSecretCmdEndpoints(rootCmd *cobra.Command, uc secret.UseCase, authM
   This command get a credit transaction for a particular user.
   Usage: gophkeeper get --key=<key>.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			c.Get(cmd.Context(), secretKey)
+			c.Get(cmd.Context(), secretKey, saveFile)
 		},
 	}
 
@@ -58,7 +58,7 @@ func RegisterSecretCmdEndpoints(rootCmd *cobra.Command, uc secret.UseCase, authM
   This command creates a credit transaction for a particular user.
   Usage: gophkeeper create --key=<key> --value=<value|path_to_secret>.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			c.List(cmd.Context())
+			c.List(cmd.Context(), saveFile)
 
 		},
 	}

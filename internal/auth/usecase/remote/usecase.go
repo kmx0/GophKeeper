@@ -66,31 +66,34 @@ func (a *AuthUseCase) SignIn(ctx context.Context, login, password string) (strin
 
 	user, err := a.userRepo.GetUser(ctx, login, password)
 	if err != nil {
-		return "", auth.ErrUserNotFound
+		return "", fmt.Errorf("error on SignIn: %w", auth.ErrUserNotFound)
+	}
+	if password != user.Password {
+		return "", fmt.Errorf("error on SignIn: %w", auth.ErrIncorrectPassword)
 	}
 	err = ioutil.WriteFile(a.tokenFile, []byte(user.Token), 0777)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error on SignIn: %w", err)
 	}
-	return user.Token, err
+	return user.Token, nil
 }
 
 func (a *AuthUseCase) ParseToken(ctx context.Context, accessToken string) (*models.User, error) {
 	token, err := jwt.ParseWithClaims(accessToken, &AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("error on ParseToken: %w", fmt.Errorf("errunexpected signing method: %v", token.Header["alg"]))
 		}
 		return a.singingKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error on ParseToken: %w", err)
 	}
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
 		claims.User.Token = token.Raw
 		return toModelUser(claims.User), nil
 	}
-	return nil, auth.ErrInvalidAccessToken
+	return nil,fmt.Errorf("error on ParseToken: %w",  auth.ErrInvalidAccessToken)
 }
 
 func toModelUser(user *User) *models.User {
@@ -102,4 +105,3 @@ func toModelUser(user *User) *models.User {
 		Token:    user.Token,
 	}
 }
-

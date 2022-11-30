@@ -1,11 +1,12 @@
 package http
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kmx0/GophKeeper/internal/auth"
-	"github.com/sirupsen/logrus"
 )
 
 type Handler struct {
@@ -25,20 +26,21 @@ type signInput struct {
 
 func (h *Handler) SignUp(c *gin.Context) {
 	inp := new(signInput)
-	logrus.Info("!!!!!!!!!!!!111")
 	if err := c.BindJSON(inp); err != nil {
+		fmt.Printf("error on SignUp: %s", err.Error())
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	logrus.Info(inp)
-	if err := h.useCase.SignUp(c.Request.Context(), inp.Login, inp.Password); err != nil {
-		// logrus.Error(err)
-		if err == auth.ErrLoginBusy {
-			c.AbortWithStatus(http.StatusConflict)
-			return
-		}
+	err := h.useCase.SignUp(c.Request.Context(), inp.Login, inp.Password)
+	if err != nil && !errors.Is(errors.Unwrap(err), auth.ErrLoginBusy) {
+		fmt.Printf("error on SignUp--: %s", err.Error())
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if errors.Is(errors.Unwrap(err), auth.ErrLoginBusy) {
+		fmt.Printf("error on SignUp: %s", err.Error())
+		c.AbortWithStatus(http.StatusConflict)
 		return
 	}
 	c.Status(http.StatusOK)
@@ -53,18 +55,20 @@ func (h *Handler) SignIn(c *gin.Context) {
 	inp := new(signInput)
 
 	if err := c.BindJSON(inp); err != nil {
+		fmt.Printf("error on SignIn: %s", err.Error())
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	token, err := h.useCase.SignIn(c.Request.Context(), inp.Login, inp.Password)
-	if err != nil {
-		if err == auth.ErrUserNotFound {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
+	if err != nil && !errors.Is(err, auth.ErrUserNotFound) {
+		fmt.Printf("error on SignIn: %s", err.Error())
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if errors.Is(errors.Unwrap(err), auth.ErrUserNotFound) {
+		fmt.Printf("error on SignIn: %s", err.Error())
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 

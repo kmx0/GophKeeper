@@ -1,7 +1,6 @@
-address: localhost
-port: 8000
+gokeeper_server_addr: https://localhost:8000
 pg_migration_dir: ../../internal/migrate/migrations
-
+dsn: "postgres://postgres:postgres@localhost:5432/gophkeeper"
 auth:
   hash_salt: "hash_salt"
   signing_key: "signing_key"

@@ -26,9 +26,7 @@ func (m SecretUseCaseMock) GetSecrets(ctx context.Context, user *models.User) ([
 
 func (m SecretUseCaseMock) GetSecret(ctx context.Context, user *models.User, key string) (*models.Secret, error) {
 	args := m.Called(user, key)
-	sc := args.Get(0).(*models.Secret)
-	sc.Key = key
-	return sc, args.Error(1)
+	return args.Get(0).(*models.Secret), args.Error(1)
 }
 
 func (m SecretUseCaseMock) DeleteSecret(ctx context.Context, user *models.User, key string) error {
